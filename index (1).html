@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Morning Practice">
+  <meta name="theme-color" content="#f5f0e8">
+  <title>Morning Practice · Christin</title>
+  <link rel="apple-touch-icon" href="icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { background: #f5f0e8; overscroll-behavior: none; }
+    #root { min-height: 100vh; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+// ── COLORS ────────────────────────────────────────
+const C = {
+  cream: "#f5f0e8", warm: "#faf8f4", sage: "#7a8c6e", darkSage: "#4a5e3e",
+  taupe: "#b8a99a", deep: "#2c2416", amber: "#c4813a", soft: "#e8e2d9", muted: "#8a7f74",
+};
+
+// ── DATA ──────────────────────────────────────────
+const RITUAL_ITEMS = [
+  { id: "water", icon: "💧", name: "16–20 oz Water", note: "Before coffee. Before anything. Rehydrate from overnight." },
+  { id: "vitamins", icon: "🌿", name: "Vitamins & Supplements", note: "Pumpkin seed oil · BioSil · morning stack." },
+  { id: "vibeplate", icon: "〰️", name: "Vibration Plate", note: "5–15 min. See protocols below." },
+];
+const VIBE_PROTOCOLS = [
+  { id: "vp1", time: "5 min", name: "Wake-Up Flow", desc: "Stand relaxed, feet hip-width, slight knee bend. Let your body receive it — lymph moves, circulation wakes up." },
+  { id: "vp2", time: "5 min", name: "Calf & Lower Leg", desc: "Seated, calves resting on the plate. Great for fluid drainage and calf fascia — pairs perfectly with foot rolling." },
+  { id: "vp3", time: "5 min", name: "Hip & Glute Activation", desc: "Stand in a slight squat. Engages glutes and hip stabilizers. Good pre-primer before fascia work." },
+  { id: "vp4", time: "5–10 min", name: "Standing Relaxation + Breath", desc: "End of practice. Stand soft, breathe slow. Parasympathetic activation, cortisol down. Do this last." },
+];
+const FASCIA_EXERCISES = [
+  { name: "Diaphragmatic Breathing", time: "2 min", cue: "Lie on your back, knees bent. One hand on belly, one on chest. Breathe into your belly — belly rises first, then chest. Exhale fully. This is the reset. Don't skip it.", bullets: ["Inhale 4 counts through nose, belly out", "Hold 1 count at top", "Exhale 6 counts through mouth, belly drops", "Soften your jaw. Soften your shoulders."] },
+  { name: "Foot & Ankle Rolling", time: "2 min each", cue: "Seated. Tennis ball or lacrosse ball under one foot. Slow circles, pause on tender spots. You're looking for the 'good hurt.'", bullets: ["Roll arch, heel, ball of foot", "Pause 10–15 sec on any dense spot", "Flex and point toes while pausing", "Do both feet — this affects everything above"] },
+  { name: "Calf & Achilles Flossing", time: "60 sec each", cue: "Roller under your calf. Cross the other leg on top for more pressure. Slowly rotate the ankle in circles. This hydrates the tissue.", bullets: ["Long slow strokes from ankle to just below knee", "Pause mid-calf and draw big circles with your foot", "Inner and outer calf — roll the leg side to side", "Breathe through the pressure"] },
+  { name: "Hip Flexor + Psoas Melt", time: "90 sec each side", cue: "Lie face down. Ball just inside your hip bone, below your belly button. Breathe into it. The psoas holds a LOT of stress.", bullets: ["Find the soft triangle between hip bone and navel", "Start with very light pressure — add weight slowly", "Breathe in and feel your belly push into the ball", "Breathe out and let the tissue soften", "No rolling — sustained pressure only"] },
+  { name: "Thoracic Spine Open", time: "2–3 min", cue: "Roller across your mid-back, arms crossed. Segmentally extend over the roller — one vertebra at a time. This is where most women are glued shut.", bullets: ["Start at bra-strap level, work up toward shoulder blades", "Cradle your head — don't strain your neck", "Take 3 breaths at each spot before moving", "Let gravity do the work on the exhale"] },
+  { name: "Lat & Side Body Release", time: "60–90 sec each", cue: "Side lying on the roller, armpit area to mid-rib. Arm overhead. Releases lat fascia which connects into your low back and glutes.", bullets: ["Start just below armpit, roll slowly toward waist", "Rotate slightly forward and back to find tender spots", "Pause and breathe deeply — rib expansion is the stretch", "Reach arm long overhead for more opening"] },
+  { name: "Glute & Piriformis Sink", time: "90 sec each side", cue: "Seated on a ball or roller. Cross one ankle over opposite knee (figure-4). Lean into the glute. Take your time here.", bullets: ["Find the sweet spot just to the side of the sits bone", "Slowly rotate your upper body to shift pressure", "Lean forward over your knee to deepen", "Breathe — every exhale softens the tissue"] },
+  { name: "Inner Thigh & Adductor Roll", time: "60–90 sec each", cue: "Face down, roller under inner thigh. The adductors connect to your pelvic floor — releasing here reduces low back tension too.", bullets: ["Roller perpendicular to your inner thigh", "Prop up on forearms, move body slowly forward/back", "Find the densest band and pause", "Flex and extend your knee while pausing"] },
+  { name: "Full Body Scan + Integration", time: "2–3 min", cue: "Lie on your back. Arms by your sides, palms up. Close your eyes. Notice what's softer than when you started. The nervous system needs a moment to integrate.", bullets: ["No movement necessary — just breathe", "Scan from feet to crown — what's changed?", "Stay until your breath slows fully", "Rise slowly — you've earned the pace"] },
+];
+const WORKOUTS = [
+  {
+    id: "legs-strength", day: "Day 1", label: "Legs", sublabel: "Strength",
+    title: "Legs · Strength", subtitle: "Heavy compound work. Low reps, full recovery. This is where you build.",
+    duration: "50–60 min", location: "Home or Gym",
+    blocks: [
+      { name: "Warm-Up", exercises: [
+        { name: "Hip Circle + Leg Swing", prescription: "2×10 each direction", cue: "Hold something for balance. Big controlled circles — open the hip joint before you load it. This isn't optional." },
+        { name: "Banded Glute Kickback", prescription: "2×15 each side", cue: "Band just above knees. Hinge slightly forward. Drive heel back and UP — feel the glute fully contract at the top. Slow on the return." },
+        { name: "Goblet Squat", prescription: "2×10 light", cue: "Use this to find your depth. Elbows inside knees at the bottom. Chest tall. This primes your pattern before the barbell." },
+      ]},
+      { name: "Main Work", exercises: [
+        { name: "Barbell Back Squat", prescription: "4×4–5 @ heavy", cue: "This is your strength anchor. Brace hard before you unrack. Sit into your hips — not just down. Drive your knees out. 3–4 min rest between sets." },
+        { name: "Romanian Deadlift", prescription: "3×6 @ heavy", cue: "Hinge — don't squat. Bar stays close to your legs. Push your hips back until you feel the hamstring load, then drive hips forward. Squeeze hard at the top." },
+        { name: "Barbell Hip Thrust", prescription: "3×5 @ near-max", cue: "Shoulder blades on bench. Bar padded across hips. Drive through heels. At the top: hips fully extended, ribs down, glutes locked. 3 sec hold optional." },
+      ]},
+      { name: "Accessory", exercises: [
+        { name: "Bulgarian Split Squat", prescription: "3×6 each leg", cue: "Rear foot elevated. Front foot far enough forward that your knee stays behind your toes. Lower slowly (3 sec down). This will humble you — that's correct." },
+        { name: "Seated Calf Raise", prescription: "3×12 slow", cue: "Full range. Bottom = full stretch, top = full contraction. 2 sec pause at top. Calves respond to time under tension." },
+      ]},
+    ],
+    finisher: { name: "Loaded Carry", desc: "2 rounds: farmer carry with heavy dumbbells or kettlebells, 40 ft down and back. Grip tight, shoulders packed, walk tall." },
+  },
+  {
+    id: "legs-shape", day: "Day 2", label: "Legs", sublabel: "Shape",
+    title: "Legs · Shape", subtitle: "Moderate weight, higher volume, time under tension. Building the curves.",
+    duration: "45–55 min", location: "Home or Gym",
+    blocks: [
+      { name: "Warm-Up", exercises: [
+        { name: "Glute Bridge Hold", prescription: "2×30 sec hold", cue: "Feet flat, drive through heels. Hold at the top — squeeze hard. This wakes up the glutes before everything else." },
+        { name: "Side-Lying Clamshell", prescription: "2×20 each side", cue: "Band above knees. Keep your hips stacked — don't let your pelvis rock back. Targets the glute medius for that rounded side." },
+      ]},
+      { name: "Main Work", exercises: [
+        { name: "Hip Thrust", prescription: "4×10–12 @ moderate-heavy", cue: "Full contraction every rep. 2 sec pause at the top. Feet placement matters — experiment to find where you feel it most in the glutes vs. quads." },
+        { name: "Leg Press", prescription: "3×12–15", cue: "Feet high and wide on the platform = more glute and ham. Controlled descent — 3 sec down. Push through the whole foot, not just the toes." },
+        { name: "Walking Lunge", prescription: "3×12 each leg", cue: "Long stride. Front knee tracks over second toe. Upright torso. Add weight when bodyweight feels easy." },
+      ]},
+      { name: "Isolation", exercises: [
+        { name: "Cable or Band Kickback", prescription: "3×15 each side", cue: "Hip hinge slightly. Drive the heel back and UP. Slow and squeeze — this isn't a leg swing." },
+        { name: "Sumo Squat Pulse", prescription: "3×20 pulses + 5 full reps", cue: "Wide stance, toes turned out. Pulse in the bottom third — stay LOW. Then 5 full reps. Inner thighs and glutes will feel this." },
+        { name: "Leg Curl (machine or band)", prescription: "3×12–15", cue: "Full range — don't cheat the bottom. Curl slow, lower slow. Hamstrings are chronically weak in most women; these matter." },
+      ]},
+    ],
+    finisher: { name: "Glute Burnout", desc: "1 round: 20 hip thrusts bodyweight → 20 glute bridges → 20 clamshells each side → 30 sec wall sit. No rest between." },
+  },
+  {
+    id: "legs-endurance", day: "Day 3", label: "Legs", sublabel: "Endurance",
+    title: "Legs · Endurance", subtitle: "Lighter load, longer circuits. Metabolic conditioning that still builds muscle.",
+    duration: "40–50 min", location: "Home gym",
+    blocks: [
+      { name: "Warm-Up", exercises: [
+        { name: "Jump Rope or March in Place", prescription: "3 min", cue: "Get your heart rate up. Breathing should be elevated before the first working set." },
+        { name: "Dynamic Hip Flexor Stretch", prescription: "1 min each side", cue: "Step into a lunge, reach same arm as back leg overhead. Rock gently. Open the front of your hip before the circuits." },
+      ]},
+      { name: "Circuit A — 3 Rounds", exercises: [
+        { name: "Goblet Squat", prescription: "15 reps", cue: "Moderate weight. 3 sec down, drive up. Rest 60 sec after full round." },
+        { name: "Reverse Lunge", prescription: "12 each leg", cue: "Step back, lower under control. Keep front shin vertical. Alternate legs or do all one side." },
+        { name: "Hip Thrust", prescription: "20 reps @ lighter load", cue: "Higher rep but still controlled. Full contraction every single rep — this is the point of the day." },
+      ]},
+      { name: "Circuit B — 3 Rounds", exercises: [
+        { name: "Lateral Band Walk", prescription: "15 steps each direction", cue: "Band above knees. Slight squat position. Stay low the whole time. Glute meds are working here." },
+        { name: "Single-Leg Glute Bridge", prescription: "15 each side", cue: "One foot flat, one leg lifted. Drive through the heel. Working glute should be shaking by rep 12 — that's the signal." },
+        { name: "Squat Jump or Deep Squat Hold", prescription: "10 jumps OR 30 sec hold", cue: "If joints are happy: jump. If not: deep squat hold. Both are hard. Both work." },
+      ]},
+      { name: "Core + Stability", exercises: [
+        { name: "Dead Bug", prescription: "3×8 each side", cue: "Lower back pressed INTO the floor the entire time. Opposite arm and leg extend slow. If your back lifts — shorten the range." },
+        { name: "Side Plank", prescription: "3×30 sec each side", cue: "Hip stacked, don't let it sag. Stack feet or stagger them. Breathe." },
+      ]},
+    ],
+    finisher: { name: "Step-Up Ladder", desc: "Box or bench at home. 5 reps → 10 reps → 15 reps each leg, 30 sec rest between rounds. Drive through the heel of the working leg." },
+  },
+  {
+    id: "upper", day: "Day 4", label: "Upper", sublabel: "",
+    title: "Upper Body", subtitle: "Push, pull, carry. Shoulders, back, arms — strong from the ground up.",
+    duration: "45–55 min", location: "Home or Gym",
+    blocks: [
+      { name: "Warm-Up", exercises: [
+        { name: "Band Pull-Apart", prescription: "2×15", cue: "Arms straight, band at chest height. Pull apart until hands reach your sides. Squeeze shoulder blades together. Opens chest and activates rear delts." },
+        { name: "Shoulder CARs", prescription: "5 each direction, each arm", cue: "Slow, full-range shoulder circles. This is joint prep — the biggest circle you can make. Don't rush it." },
+      ]},
+      { name: "Push", exercises: [
+        { name: "Barbell Overhead Press", prescription: "4×6–8", cue: "Your main push movement. Brace hard before each rep. Press the bar slightly back overhead so it ends over your mid-foot. Lower controlled." },
+        { name: "Dumbbell Incline Press", prescription: "3×10–12", cue: "Bench at 30–45°. Elbows at 45° from torso — not flared wide. Full range: stretch at the bottom, lock out at the top." },
+        { name: "Lateral Raise", prescription: "3×15 slow", cue: "Lead with your elbows, not your hands. Stop at shoulder height. The 2-sec lowering phase is where the growth happens — don't drop the weights." },
+      ]},
+      { name: "Pull", exercises: [
+        { name: "Barbell Bent-Over Row", prescription: "4×8", cue: "Hinge to 45°, brace, pull bar to your lower ribs. Squeeze shoulder blades at the top. Lower with control — the eccentric matters." },
+        { name: "Single-Arm Dumbbell Row", prescription: "3×10 each side", cue: "Knee and hand on bench. Pull elbow toward the ceiling — not straight back. Full stretch at the bottom. Lats, not biceps." },
+        { name: "Face Pull or Band Pull-Apart", prescription: "3×15", cue: "Rear delts and rotator cuff. Injury prevention AND shoulder shape. High anchor, pull toward your face, elbows high and wide." },
+      ]},
+      { name: "Arms + Core", exercises: [
+        { name: "Bicep Curl", prescription: "2×12–15", cue: "Full range — start with arms fully extended. Squeeze hard at the top. Don't swing. These are a gift to yourself." },
+        { name: "Tricep Overhead Extension", prescription: "2×12", cue: "Elbows forward and close. Full extension at top, deep stretch at bottom. The long head of the tricep needs this range." },
+        { name: "Plank to Down Dog", prescription: "2×10 slow", cue: "From plank: push hips up and back to down dog, return to plank. Slow and controlled. Shoulder stability + core + mobility." },
+      ]},
+    ],
+    finisher: { name: "Push-Up Countdown", desc: "10 → 8 → 6 → 4 → 2. No rest between sets — just reset your breath. Modify on knees if needed, but keep moving." },
+  },
+];
+const LIFTS = [
+  { id: "hipThrust", name: "Hip Thrust", badge: "Glutes" },
+  { id: "squat", name: "Squat", badge: "Legs" },
+  { id: "bbPress", name: "Barbell Press", badge: "Push" },
+  { id: "bbRow", name: "Barbell Row", badge: "Pull" },
+];
+const DEFICIT_HABITS = [
+  { id: "h_protein", icon: "🥩", name: "Hit protein target", detail: "Spread across meals — don't leave it to dinner" },
+  { id: "h_water", icon: "💧", name: "Drink 80+ oz water", detail: "Hunger is often thirst. Stay ahead of it." },
+  { id: "h_veg", icon: "🥦", name: "Veggies at 2+ meals", detail: "Volume, fiber, satiety — the trifecta" },
+  { id: "h_sleep", icon: "🌙", name: "In bed by 10pm", detail: "Poor sleep tanks fat loss and spikes hunger hormones" },
+  { id: "h_alcohol", icon: "🚫", name: "Alcohol-free today", detail: "Alcohol pauses fat oxidation for hours. Big lever." },
+  { id: "h_mindless", icon: "🧠", name: "No mindless eating", detail: "Ate intentionally — sat down, plated, present" },
+];
+
+// ── STORAGE ───────────────────────────────────────
+const SK = "mpa_v2";
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(SK)) || {}; } catch { return {}; }
+}
+function saveState(s) {
+  try { localStorage.setItem(SK, JSON.stringify(s)); } catch {}
+}
+
+function calcNutrition(weight, heightIn, age, activityMult, leanMass) {
+  const bmr = (10 * weight * 0.453592) + (6.25 * heightIn * 2.54) - (5 * age) - 161;
+  const tdee = Math.round(bmr * activityMult);
+  const deficit = Math.max(1400, Math.round(tdee - 350));
+  const protein = Math.min(Math.round((leanMass || weight * 0.7) * 1.1), 160);
+  const fat = Math.round((deficit * 0.30) / 9);
+  const carbs = Math.max(0, Math.round((deficit - (protein * 4) - (fat * 9)) / 4));
+  return { tdee, deficit, protein, fat, carbs, bmr: Math.round(bmr) };
+}
+
+// ── SHARED COMPONENTS ─────────────────────────────
+const s = {
+  tag: { display:"inline-block", background:C.soft, color:C.muted, fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", padding:"4px 10px", borderRadius:20, marginBottom:14 },
+  card: { background:C.warm, border:`1px solid ${C.soft}`, borderRadius:16, padding:20, marginBottom:12 },
+  infoCard: { background:C.cream, borderRadius:10, padding:14, marginBottom:8 },
+  infoTitle: { fontSize:12, fontWeight:500, color:C.deep, marginBottom:6 },
+  infoBody: { fontSize:12, color:C.muted, lineHeight:1.65 },
+  actionBtn: { width:"100%", background:C.deep, color:C.cream, border:"none", borderRadius:10, padding:12, fontFamily:"inherit", fontSize:13, fontWeight:500, letterSpacing:"0.04em", cursor:"pointer", marginTop:4 },
+  secBtn: { width:"100%", background:"none", color:C.muted, border:`1px solid ${C.soft}`, borderRadius:10, padding:12, fontFamily:"inherit", fontSize:13, cursor:"pointer", marginTop:6 },
+  blockLabel: { fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase", color:C.taupe, marginBottom:10, display:"flex", alignItems:"center", gap:8 },
+  input: { width:"100%", background:C.cream, border:`1px solid ${C.soft}`, borderRadius:8, padding:"9px 10px", fontFamily:"inherit", fontSize:14, color:C.deep, MozAppearance:"textfield" },
+  label: { display:"block", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", color:C.taupe, marginBottom:5 },
+};
+
+function Tag({ children, style }) {
+  return <span style={{...s.tag,...style}}>{children}</span>;
+}
+function InfoCard({ title, children }) {
+  return <div style={s.infoCard}><div style={s.infoTitle}>{title}</div><div style={s.infoBody}>{children}</div></div>;
+}
+function ProgressBar({ value, color=C.sage }) {
+  return <div style={{height:4,background:C.soft,borderRadius:2,overflow:"hidden"}}>
+    <div style={{height:"100%",width:`${Math.min(100,value)}%`,background:color,borderRadius:2,transition:"width 0.4s ease"}}/>
+  </div>;
+}
+function Circle({ done, size=26 }) {
+  return <div style={{width:size,height:size,borderRadius:"50%",border:`1.5px solid ${done?C.sage:C.soft}`,background:done?C.sage:C.cream,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:done?"white":"transparent",flexShrink:0,transition:"all 0.2s"}}>✓</div>;
+}
+
+// ── RITUAL TAB ────────────────────────────────────
+function RitualTab({ state, setState }) {
+  const ritual = state.ritual || {};
+  const toggle = (id) => {
+    const r = {...(state.ritual||{}), [id]: !(state.ritual||{})[id]};
+    setState(s => ({...s, ritual: r}));
+  };
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"28px 20px 0"}}>
+        <Tag>First thing · every day</Tag>
+        <p style={{fontSize:14,lineHeight:1.7,color:C.muted}}>Before everything else. These are yours. Check them off and start your day from a full place.</p>
+      </div>
+      <div style={{padding:"20px 20px 0",display:"flex",flexDirection:"column",gap:10}}>
+        {RITUAL_ITEMS.map(item => {
+          const done = ritual[item.id];
+          return (
+            <div key={item.id} onClick={() => toggle(item.id)} style={{display:"flex",alignItems:"center",gap:16,background:C.warm,border:`1px solid ${C.soft}`,borderRadius:14,padding:"16px 18px",cursor:"pointer",opacity:done?0.65:1,position:"relative",overflow:"hidden",transition:"opacity 0.2s"}}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:done?C.sage:C.soft,transition:"background 0.2s"}}/>
+              <div style={{fontSize:22,width:32,textAlign:"center",flexShrink:0}}>{item.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:500,color:C.deep}}>{item.name}</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:2,lineHeight:1.4}}>{item.note}</div>
+              </div>
+              <Circle done={done}/>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{margin:"20px 20px 0",background:C.warm,border:`1px solid ${C.soft}`,borderRadius:16,overflow:"hidden"}}>
+        <div style={{padding:"18px 18px 0"}}>
+          <Tag style={{marginBottom:8}}>5–15 min</Tag>
+          <div style={{fontFamily:"serif",fontSize:18,fontWeight:500,color:C.deep,marginBottom:3}}>Vibration Plate</div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:14}}>Lymphatic flow · nervous system reset · circulation primer</div>
+        </div>
+        {VIBE_PROTOCOLS.map((p,i) => {
+          const done = ritual[p.id];
+          return (
+            <div key={p.id} onClick={() => toggle(p.id)} style={{padding:"13px 18px",borderTop:`1px solid ${C.soft}`,display:"flex",alignItems:"flex-start",gap:12,cursor:"pointer",opacity:done?0.55:1}}>
+              <div style={{fontSize:11,fontWeight:500,color:C.amber,letterSpacing:"0.06em",width:38,flexShrink:0,paddingTop:2}}>{p.time}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:500,color:C.deep,marginBottom:2}}>{p.name}</div>
+                <div style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{p.desc}</div>
+              </div>
+              <Circle done={done} size={22}/>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── FASCIA TAB ────────────────────────────────────
+function FasciaTab({ state, setState }) {
+  const [expanded, setExpanded] = useState(null);
+  const checked = state.fasciaChecked || {};
+  const doneCount = Object.values(checked).filter(Boolean).length;
+  const toggle = (i) => {
+    setState(s => ({...s, fasciaChecked: {...(s.fasciaChecked||{}), [i]: !(s.fasciaChecked||{})[i]}}));
+  };
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"28px 20px 0"}}>
+        <Tag>20–30 min · floor + roller</Tag>
+        <p style={{fontSize:14,lineHeight:1.7,color:C.muted}}>Slow, intentional, breath-led. This isn't a workout — it's listening. Tap any move to expand the cues.</p>
+      </div>
+      <div style={{padding:"16px 20px 4px"}}>
+        <ProgressBar value={(doneCount/FASCIA_EXERCISES.length)*100}/>
+        <div style={{fontSize:11,color:C.muted,marginTop:6,letterSpacing:"0.05em"}}>{doneCount} of {FASCIA_EXERCISES.length} complete</div>
+      </div>
+      <div style={{padding:"8px 20px 0",display:"flex",flexDirection:"column",gap:10}}>
+        {FASCIA_EXERCISES.map((ex,i) => {
+          const done = checked[i];
+          const open = expanded===i;
+          return (
+            <div key={i} style={{background:C.warm,border:`1px solid ${C.soft}`,borderRadius:16,overflow:"hidden",position:"relative",opacity:done?0.65:1,transition:"opacity 0.2s"}}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:done?C.sage:C.soft}}/>
+              <div onClick={()=>setExpanded(open?null:i)} style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",padding:"16px 16px 16px 20px",gap:10,cursor:"pointer"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:15,fontWeight:500,color:C.deep,lineHeight:1.3}}>{ex.name}</div>
+                  <div style={{fontSize:12,color:C.amber,fontWeight:500,marginTop:2}}>{ex.time}</div>
+                </div>
+                <div style={{fontSize:16,color:C.muted,marginTop:2}}>{open?"▲":"▼"}</div>
+              </div>
+              {open && (
+                <div style={{padding:"0 16px 14px 20px",borderTop:`1px solid ${C.soft}`}}>
+                  <p style={{fontSize:13,color:C.muted,lineHeight:1.65,paddingTop:10,marginBottom:8}}>{ex.cue}</p>
+                  <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:4}}>
+                    {ex.bullets.map((b,j)=><li key={j} style={{fontSize:12,color:C.muted,lineHeight:1.5}}><span style={{color:C.sage,fontWeight:700}}>·  </span>{b}</li>)}
+                  </ul>
+                  <button onClick={()=>toggle(i)} style={{marginTop:12,background:done?C.sage:"none",color:done?"white":C.muted,border:`1px solid ${done?C.sage:C.soft}`,borderRadius:10,padding:"7px 14px",fontFamily:"inherit",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                    <span>{done?"✓":""}</span>{done?"Done":"Mark complete"}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── WORKOUTS TAB ──────────────────────────────────
+function WorkoutsTab({ state, setState }) {
+  const [activeDay, setActiveDay] = useState(0);
+  const [expanded, setExpanded] = useState(null);
+  const w = WORKOUTS[activeDay];
+  const wKey = `wo_${w.id}`;
+  const checked = (state.woChecked||{})[wKey] || {};
+  const allEx = w.blocks.flatMap(b=>b.exercises);
+  const doneCount = Object.values(checked).filter(Boolean).length;
+
+  const toggleEx = (idx) => {
+    setState(s => {
+      const wc = {...(s.woChecked||{})};
+      wc[wKey] = {...(wc[wKey]||{}), [idx]: !(wc[wKey]||{})[idx]};
+      return {...s, woChecked: wc};
+    });
+  };
+
+  let exIdx = 0;
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"20px 20px 0",display:"flex",gap:8}}>
+        {WORKOUTS.map((wk,i) => (
+          <div key={i} onClick={()=>{setActiveDay(i);setExpanded(null);}} style={{flex:1,background:i===activeDay?C.deep:C.warm,border:`1.5px solid ${i===activeDay?C.deep:C.soft}`,borderRadius:12,padding:"10px 4px",textAlign:"center",cursor:"pointer",transition:"all 0.2s"}}>
+            <div style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:i===activeDay?C.taupe:C.muted,marginBottom:3}}>{wk.day}</div>
+            <div style={{fontFamily:"serif",fontSize:12,color:i===activeDay?C.cream:C.deep,lineHeight:1.2}}>{wk.label}</div>
+            {wk.sublabel&&<div style={{fontSize:9,color:i===activeDay?"rgba(255,255,255,0.6)":C.muted}}>{wk.sublabel}</div>}
+          </div>
+        ))}
+      </div>
+      <div style={{padding:"18px 20px 0"}}>
+        <div style={{fontFamily:"serif",fontSize:22,fontWeight:500,color:C.deep}}>{w.title}</div>
+        <div style={{fontSize:13,color:C.muted,marginTop:4,lineHeight:1.5}}>{w.subtitle}</div>
+        <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",background:C.soft,color:C.muted,padding:"3px 10px",borderRadius:20}}>{w.duration}</span>
+          <span style={{fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",background:"#e8f0e4",color:C.darkSage,padding:"3px 10px",borderRadius:20}}>{w.location}</span>
+        </div>
+      </div>
+      <div style={{padding:"14px 20px 0"}}>
+        <ProgressBar value={(doneCount/allEx.length)*100}/>
+        <div style={{fontSize:11,color:C.muted,marginTop:6}}>{doneCount} of {allEx.length} exercises done</div>
+      </div>
+      {w.blocks.map(block => {
+        return (
+          <div key={block.name} style={{padding:"18px 20px 0"}}>
+            <div style={{...s.blockLabel}}>
+              {block.name}
+              <div style={{flex:1,height:1,background:C.soft}}/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {block.exercises.map(ex => {
+                const idx = exIdx++;
+                const done = checked[idx];
+                const open = expanded===`${activeDay}-${idx}`;
+                return (
+                  <div key={idx} style={{background:C.warm,border:`1px solid ${C.soft}`,borderRadius:14,overflow:"hidden",position:"relative",opacity:done?0.55:1,transition:"opacity 0.2s"}}>
+                    <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:done?C.sage:C.soft}}/>
+                    <div onClick={()=>setExpanded(open?null:`${activeDay}-${idx}`)} style={{display:"flex",alignItems:"flex-start",padding:"13px 14px",gap:10,cursor:"pointer"}}>
+                      <div style={{fontSize:11,fontWeight:600,color:C.taupe,width:20,flexShrink:0,paddingTop:3}}>{String(idx+1).padStart(2,"0")}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:500,color:C.deep,lineHeight:1.3}}>{ex.name}</div>
+                        <div style={{fontSize:12,color:C.amber,fontWeight:500,marginTop:2}}>{ex.prescription}</div>
+                      </div>
+                      <div onClick={e=>{e.stopPropagation();toggleEx(idx);}} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${done?C.sage:C.soft}`,background:done?C.sage:C.cream,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:done?"white":"transparent",cursor:"pointer",flexShrink:0,transition:"all 0.2s"}}>✓</div>
+                    </div>
+                    {open && <div style={{padding:"10px 14px 13px 44px",borderTop:`1px solid ${C.soft}`,fontSize:12,lineHeight:1.6,color:C.muted}}>{ex.cue}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {w.finisher && (
+        <div style={{padding:"18px 20px 0"}}>
+          <div style={{background:C.deep,borderRadius:14,padding:"16px 18px",color:C.cream}}>
+            <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:C.taupe,marginBottom:8}}>Finisher</div>
+            <div style={{fontFamily:"serif",fontSize:17,marginBottom:6}}>{w.finisher.name}</div>
+            <div style={{fontSize:12,color:C.taupe,lineHeight:1.6}}>{w.finisher.desc}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── LIFTS TAB ─────────────────────────────────────
+function LiftsTab({ state, setState }) {
+  const [inputs, setInputs] = useState({});
+  const history = state.liftHistory || {};
+
+  const getWeekSessions = (id) => {
+    const h = history[id] || [];
+    const now = new Date();
+    const start = new Date(now); start.setDate(now.getDate()-now.getDay()); start.setHours(0,0,0,0);
+    return h.filter(s=>new Date(s.timestamp)>=start).length;
+  };
+
+  const logLift = (id) => {
+    const inp = inputs[id] || {};
+    if (!inp.weight || !inp.sets || !inp.reps) return;
+    const entry = { weight: parseFloat(inp.weight), sets: parseInt(inp.sets), reps: parseInt(inp.reps), date: new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}), timestamp: Date.now() };
+    setState(s => {
+      const lh = {...(s.liftHistory||{})};
+      lh[id] = [...(lh[id]||[]), entry].slice(-20);
+      return {...s, liftHistory: lh};
+    });
+    setInputs(i=>({...i,[id]:{}}));
+  };
+
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"24px 20px 0"}}>
+        <p style={{fontSize:14,lineHeight:1.7,color:C.muted}}>Twice a week. Log your sets, weight, and reps. Keep it simple — just show up and move the bar.</p>
+      </div>
+      <div style={{padding:"16px 20px 0",display:"flex",flexDirection:"column",gap:14}}>
+        {LIFTS.map(lift => {
+          const h = (history[lift.id]||[]).slice(-5).reverse();
+          const wk = getWeekSessions(lift.id);
+          const inp = inputs[lift.id] || {};
+          return (
+            <div key={lift.id} style={{background:C.warm,border:`1px solid ${C.soft}`,borderRadius:16,padding:20}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <div style={{fontFamily:"serif",fontSize:18,fontWeight:500,color:C.deep}}>{lift.name}</div>
+                <span style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",background:C.soft,color:C.muted,padding:"3px 9px",borderRadius:12}}>{lift.badge}</span>
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:14}}>
+                {[0,1].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:wk>i?C.sage:C.soft}}/>)}
+                <span style={{fontSize:11,color:C.muted,marginLeft:4}}>{wk}/2 this week</span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                {["weight","sets","reps"].map(field=>(
+                  <div key={field}>
+                    <label style={s.label}>{field==="weight"?"Weight (lbs)":field.charAt(0).toUpperCase()+field.slice(1)}</label>
+                    <input type="number" placeholder={field==="weight"?"135":field==="sets"?"3":"8"} value={inp[field]||""} onChange={e=>setInputs(i=>({...i,[lift.id]:{...inp,[field]:e.target.value}}))} style={s.input}/>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>logLift(lift.id)} style={s.actionBtn}>Log Session</button>
+              {h.length>0 && (
+                <div style={{marginTop:12,borderTop:`1px solid ${C.soft}`,paddingTop:10}}>
+                  <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:C.taupe,marginBottom:6}}>Recent</div>
+                  {h.map((e,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.muted,padding:"3px 0"}}>
+                      <span style={{fontWeight:500,color:C.deep}}>{e.sets}×{e.reps} @ {e.weight} lbs</span>
+                      <span style={{fontSize:11,color:C.taupe}}>{e.date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── WALK TAB ──────────────────────────────────────
+function WalkTab({ state, setState }) {
+  const walks = state.walks || {};
+  const todayKey = new Date().toDateString();
+  const walkedToday = walks[todayKey];
+
+  const weekDays = (() => {
+    const now = new Date(); const days=["Su","Mo","Tu","We","Th","Fr","Sa"]; const result=[];
+    for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);result.push({label:days[d.getDay()],key:d.toDateString(),today:i===0});}
+    return result;
+  })();
+
+  const streak = (() => {
+    let s=0; const d=new Date();
+    while(walks[d.toDateString()]){s++;d.setDate(d.getDate()-1);}
+    return s;
+  })();
+
+  const toggle = (key) => {
+    setState(s => {
+      const w = {...(s.walks||{})};
+      if(w[key]) delete w[key]; else w[key]=true;
+      return {...s, walks:w};
+    });
+  };
+
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"28px 20px 0"}}>
+        <Tag>Morning fasted walk · fat loss protocol</Tag>
+        <p style={{fontSize:14,lineHeight:1.7,color:C.muted}}>One of the highest-leverage things you can do for body composition right now. Fasted, low-intensity, consistent. It works with your hormones — not against them.</p>
+      </div>
+      <div style={{padding:"20px 20px 0"}}>
+        <div style={{...s.card}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,background:C.cream,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+            <div style={{fontFamily:"serif",fontSize:36,color:C.amber,lineHeight:1}}>{streak}</div>
+            <div>
+              <div style={{fontSize:14,fontWeight:500,color:C.deep}}>{streak===1?"1 day streak":streak>1?`${streak} day streak`:"Start your streak"}</div>
+              <div style={{fontSize:12,color:C.muted}}>{Object.keys(walks).length} total walks logged</div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:14}}>
+            {weekDays.map(d=>(
+              <div key={d.key} onClick={()=>toggle(d.key)} style={{aspectRatio:1,borderRadius:8,background:walks[d.key]?C.sage:C.soft,border:d.today?`1.5px solid ${C.amber}`:"1.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s"}}>
+                <div style={{fontSize:9,letterSpacing:"0.05em",textTransform:"uppercase",color:walks[d.key]?"rgba(255,255,255,0.75)":C.muted}}>{d.label}</div>
+                {walks[d.key]&&<div style={{fontSize:12,color:"white"}}>✓</div>}
+              </div>
+            ))}
+          </div>
+          <button onClick={()=>toggle(todayKey)} style={{...s.actionBtn, background:walkedToday?C.sage:C.deep}}>{walkedToday?"✓ Walked Today":"Log Today's Walk"}</button>
+        </div>
+
+        <div style={{...s.blockLabel,marginBottom:12}}>Your Protocol<div style={{flex:1,height:1,background:C.soft}}/></div>
+        {[
+          {tag:"Phase 1 · Weeks 1–4",title:"20–30 min · fasted · easy pace",desc:"Before food, before coffee if possible. Heart rate stays conversational. This is Zone 2. Your body is burning fat, not glycogen. Don't make it harder than this.",active:true},
+          {tag:"Phase 2 · Weeks 5–8",title:"35–45 min · fasted · slight incline or pace increase",desc:"Add a hill, treadmill incline, or light weighted vest. Still conversational. The progression is duration and terrain, not intensity."},
+          {tag:"Advanced",title:"45–60 min · podcast walk · non-negotiable",desc:"This becomes your anchor habit. A long morning walk is one of the most underrated tools for perimenopause body composition, cortisol regulation, and mood."},
+        ].map((p,i)=>(
+          <div key={i} style={{background:C.cream,borderRadius:10,padding:14,marginBottom:8,borderLeft:`3px solid ${p.active?C.sage:C.soft}`}}>
+            <div style={{fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",color:C.amber,fontWeight:500,marginBottom:4}}>{p.tag}</div>
+            <div style={{fontSize:13,fontWeight:500,color:C.deep,marginBottom:3}}>{p.title}</div>
+            <div style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{p.desc}</div>
+          </div>
+        ))}
+
+        <div style={{...s.blockLabel,marginTop:16,marginBottom:12}}>Why This Works For You<div style={{flex:1,height:1,background:C.soft}}/></div>
+        <InfoCard title="🔥 Fat Oxidation">Fasted low-intensity cardio taps directly into fat stores. At 52, your insulin sensitivity is lower — walking fasted bypasses this and accesses stored fat more readily than food-fueled training.</InfoCard>
+        <InfoCard title="🧠 Cortisol + Visceral Fat">Your visceral fat index of 11 is driven heavily by cortisol and declining estrogen. A quiet morning walk lowers cortisol rather than spiking it. You're managing stress hormones while burning fat.</InfoCard>
+        <InfoCard title="💪 Muscle Preservation">Zone 2 walking doesn't touch your muscle tissue. Your strength training builds it — your walks burn fat around it. These two tools work together perfectly.</InfoCard>
+        <InfoCard title="⏰ Consistency > Perfection">20 minutes every day beats 60 minutes twice a week. The metabolic and hormonal benefits compound with consistency. Show up even on the days you only have 15 minutes.</InfoCard>
+      </div>
+    </div>
+  );
+}
+
+// ── NUTRITION TAB ─────────────────────────────────
+function NutritionTab({ state, setState }) {
+  const profile = state.nutritionProfile || { weight:163.8, height:62, age:52, activity:"moderate", leanMass:100.6, visceralFat:11 };
+  const todayHabits = state.dailyHabits || {};
+  const todayLog = state.todayNutrition || {};
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(profile);
+  const [logCal, setLogCal] = useState(todayLog.calories||"");
+  const [logProt, setLogProt] = useState(todayLog.protein||"");
+
+  const actMap = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725 };
+  const n = calcNutrition(profile.weight, profile.height, profile.age, actMap[profile.activity||"moderate"], profile.leanMass);
+
+  const loggedCal = parseInt(todayLog.calories||0);
+  const loggedProt = parseInt(todayLog.protein||0);
+
+  const saveProfile = () => {
+    setState(s=>({...s, nutritionProfile:{...form}}));
+    setEditing(false);
+  };
+  const saveLog = () => {
+    setState(s=>({...s, todayNutrition:{calories:logCal, protein:logProt}}));
+  };
+  const toggleHabit = (id) => {
+    setState(s=>({...s, dailyHabits:{...(s.dailyHabits||{}), [id]:!(s.dailyHabits||{})[id]}}));
+  };
+
+  if (editing) return (
+    <div style={{padding:"24px 20px",paddingBottom:20}}>
+      <div style={{fontFamily:"serif",fontSize:20,fontWeight:500,color:C.deep,marginBottom:4}}>Your Body Composition Stats</div>
+      <div style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:1.5}}>Pre-filled from your InBody scan (May 16, 2026). Update after each new scan.</div>
+      {[["weight","Weight (lbs)","163.8"],["height","Height (inches)","62"],["age","Age","52"],["leanMass","Lean Mass (lbs)","100.6"],["visceralFat","Visceral Fat Index","11"]].map(([k,label,ph])=>(
+        <div key={k} style={{marginBottom:12}}>
+          <label style={s.label}>{label}</label>
+          <input type="number" placeholder={ph} value={form[k]||""} onChange={e=>setForm(f=>({...f,[k]:parseFloat(e.target.value)}))} style={s.input}/>
+        </div>
+      ))}
+      <div style={{marginBottom:16}}>
+        <label style={s.label}>Activity Level</label>
+        <select value={form.activity||"moderate"} onChange={e=>setForm(f=>({...f,activity:e.target.value}))} style={s.input}>
+          <option value="light">Light (1–2 training days/wk)</option>
+          <option value="moderate">Moderate (3–4 days)</option>
+          <option value="active">Active (5+ days)</option>
+        </select>
+      </div>
+      <button onClick={saveProfile} style={s.actionBtn}>Calculate My Targets</button>
+      <button onClick={()=>setEditing(false)} style={s.secBtn}>Cancel</button>
+    </div>
+  );
+
+  return (
+    <div style={{paddingBottom:20}}>
+      <div style={{padding:"28px 20px 0"}}>
+        <Tag>Fat loss · InBody-informed</Tag>
+        <p style={{fontSize:14,lineHeight:1.7,color:C.muted}}>Your numbers, your habits, your body. These targets are built for muscle preservation and sustainable fat loss at 52.</p>
+      </div>
+      <div style={{padding:"20px 20px 0"}}>
+        {/* Targets card */}
+        <div style={s.card}>
+          <span style={{display:"inline-block",padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:500,letterSpacing:"0.06em",background:"#fde8d0",color:"#9b5e1a",marginBottom:12}}>Fat Loss Phase · InBody-Informed</span>
+
+          {n.bmr<1400&&<div style={{...s.infoCard,borderLeft:`3px solid ${C.amber}`,marginBottom:12}}>
+            <div style={s.infoTitle}>⚠️ Your BMR is low ({n.bmr} kcal)</div>
+            <div style={s.infoBody}>Common at 52 — your resting metabolism has slowed. Aggressive cuts backfire hard. We're keeping your target at 1,400+ to protect your metabolic rate and muscle.</div>
+          </div>}
+
+          <div style={{...s.infoCard,borderLeft:"3px solid #c0392b",marginBottom:12}}>
+            <div style={s.infoTitle}>🎯 Visceral Fat Index: {profile.visceralFat} <span style={{color:C.muted,fontSize:11,fontWeight:400}}>(normal: 1–9)</span></div>
+            <div style={s.infoBody}>Your priority number. Driven by declining estrogen and elevated cortisol. Responds well to fasted walks, strength training, sleep, and reduced alcohol — exactly what this app is built around. Expect movement within 8–12 weeks of consistency.</div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            {[["TDEE",n.tdee,false],["Target Cal",n.deficit,true],["Protein",`${n.protein}g`,false]].map(([l,v,hi])=>(
+              <div key={l} style={{background:C.cream,borderRadius:10,padding:"11px 8px",textAlign:"center"}}>
+                <div style={{fontFamily:"serif",fontSize:20,color:hi?C.sage:C.deep,fontWeight:500}}>{v}</div>
+                <div style={{fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.taupe,marginTop:2}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+            {[["Carbs",`${n.carbs}g`],["Fat",`${n.fat}g`]].map(([l,v])=>(
+              <div key={l} style={{background:C.cream,borderRadius:10,padding:"11px 8px",textAlign:"center"}}>
+                <div style={{fontFamily:"serif",fontSize:20,color:C.deep,fontWeight:500}}>{v}</div>
+                <div style={{fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.taupe,marginTop:2}}>{l}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Today's log */}
+          <div style={{marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.muted,marginBottom:4}}>
+              <span style={{fontWeight:500,color:C.deep}}>Calories today</span><span>{loggedCal} / {n.deficit}</span>
+            </div>
+            <ProgressBar value={(loggedCal/n.deficit)*100} color={C.deep}/>
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.muted,marginBottom:4}}>
+              <span style={{fontWeight:500,color:C.deep}}>Protein today</span><span>{loggedProt}g / {n.protein}g</span>
+            </div>
+            <ProgressBar value={(loggedProt/n.protein)*100} color={C.sage}/>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <div>
+              <label style={s.label}>Calories eaten</label>
+              <input type="number" placeholder="0" value={logCal} onChange={e=>setLogCal(e.target.value)} style={s.input}/>
+            </div>
+            <div>
+              <label style={s.label}>Protein (g)</label>
+              <input type="number" placeholder="0" value={logProt} onChange={e=>setLogProt(e.target.value)} style={s.input}/>
+            </div>
+          </div>
+          <button onClick={saveLog} style={s.actionBtn}>Save Today's Numbers</button>
+          <button onClick={()=>setEditing(true)} style={s.secBtn}>Edit My Stats</button>
+        </div>
+
+        {/* Daily habits */}
+        <div style={{...s.blockLabel,marginBottom:12}}>Daily Habits<div style={{flex:1,height:1,background:C.soft}}/></div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+          {DEFICIT_HABITS.map(h=>{
+            const done = todayHabits[h.id];
+            return (
+              <div key={h.id} onClick={()=>toggleHabit(h.id)} style={{display:"flex",alignItems:"center",gap:12,background:C.cream,borderRadius:10,padding:"11px 13px",cursor:"pointer",opacity:done?0.55:1,transition:"opacity 0.2s"}}>
+                <div style={{fontSize:18,width:24,textAlign:"center",flexShrink:0}}>{h.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:C.deep}}>{h.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{h.detail}</div>
+                </div>
+                <Circle done={done} size={22}/>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Education */}
+        <div style={{...s.blockLabel,marginBottom:12}}>What Moves The Needle at 52<div style={{flex:1,height:1,background:C.soft}}/></div>
+        <InfoCard title="🥩 Protein is the priority">Your lean mass is 100.6 lbs — that's what we're protecting. Protein targets here are based on lean mass, not total weight. Hit this number every single day, even rest days.</InfoCard>
+        <InfoCard title="⚡ Insulin sensitivity matters">Perimenopause worsens insulin sensitivity. Carbs hit differently than they used to. Timing matters — more carbs around training, less at rest.</InfoCard>
+        <InfoCard title="😴 Sleep is the missing variable">One night of poor sleep raises ghrelin (hunger hormone) by 30% and drops leptin (satiety). You can eat perfectly and sabotage it with 5 hours of sleep.</InfoCard>
+        <InfoCard title="🚶‍♀️ Your walk is doing more than you think">Fasted Zone 2 walking directly targets visceral fat. It lowers cortisol, improves insulin sensitivity, and accesses deep fat stores — without raising stress hormones.</InfoCard>
+        <InfoCard title="📋 InBody Scan · May 16, 2026">
+          <ul style={{marginLeft:14,lineHeight:2}}>
+            <li>Weight: 163.8 lbs · Body Fat: 38.6% (63.2 lbs)</li>
+            <li>Lean Body Mass: 100.6 lbs · BMR: 1,356 kcal</li>
+            <li>Skeletal Muscle: 33.8% (Low — target 35.8–46.2%)</li>
+            <li>Visceral Fat Index: 11 (elevated — normal 1–9)</li>
+            <li>Body Water: Low · Protein %: Low · Score: 70</li>
+          </ul>
+        </InfoCard>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────
+const TABS = ["Ritual","Walk","Nutrition","Fascia","Workouts","Lifts"];
+
+function App() {
+  const [tab, setTab] = useState("Ritual");
+  const [appState, setAppState] = useState(() => {
+    const loaded = loadState();
+    // Pre-seed InBody data
+    if (!loaded.nutritionProfile) {
+      loaded.nutritionProfile = { weight:163.8, height:62, age:52, activity:"moderate", leanMass:100.6, visceralFat:11 };
+    }
+    // Daily reset
+    const todayKey = new Date().toDateString();
+    if (loaded.lastDay !== todayKey) {
+      loaded.fasciaChecked = {};
+      loaded.ritual = {};
+      loaded.dailyHabits = {};
+      loaded.todayNutrition = {};
+      loaded.lastDay = todayKey;
+    }
+    return loaded;
+  });
+  const [toast, setToast] = useState(null);
+
+  const setState = useCallback((updater) => {
+    setAppState(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null),2800); };
+
+  const todayStr = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+
+  return (
+    <div style={{background:C.cream,minHeight:"100vh",fontFamily:"'DM Sans',system-ui,sans-serif",color:C.deep,maxWidth:480,margin:"0 auto"}}>
+      {/* Header */}
+      <div style={{padding:"36px 20px 24px",borderBottom:`1px solid ${C.soft}`}}>
+        <div style={{fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",color:C.muted,marginBottom:8}}>Your Morning Practice</div>
+        <div style={{fontFamily:"Georgia,serif",fontSize:28,fontWeight:400,lineHeight:1.2,color:C.deep}}>
+          Just for <em style={{fontStyle:"italic",color:C.sage}}>you</em> — before the world.
+        </div>
+        <div style={{marginTop:6,fontSize:13,color:C.muted,fontWeight:300}}>{todayStr}</div>
+      </div>
+
+      {/* Tab nav */}
+      <div style={{display:"flex",overflowX:"auto",borderBottom:`1px solid ${C.soft}`,scrollbarWidth:"none",padding:"0 20px"}}>
+        {TABS.map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{background:"none",border:"none",padding:"12px 0 14px",marginRight:20,fontFamily:"inherit",fontSize:13,fontWeight:tab===t?500:400,color:tab===t?C.deep:C.muted,cursor:"pointer",whiteSpace:"nowrap",position:"relative",flexShrink:0}}>
+            {t}
+            {tab===t&&<div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:C.sage}}/>}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {tab==="Ritual"&&<RitualTab state={appState} setState={setState}/>}
+      {tab==="Fascia"&&<FasciaTab state={appState} setState={setState}/>}
+      {tab==="Workouts"&&<WorkoutsTab state={appState} setState={setState}/>}
+      {tab==="Lifts"&&<LiftsTab state={appState} setState={setState}/>}
+      {tab==="Walk"&&<WalkTab state={appState} setState={setState}/>}
+      {tab==="Nutrition"&&<NutritionTab state={appState} setState={setState}/>}
+
+      {/* Toast */}
+      {toast&&<div style={{position:"fixed",bottom:32,left:"50%",transform:"translateX(-50%)",background:C.darkSage,color:"white",padding:"12px 24px",borderRadius:30,fontSize:13,fontWeight:500,whiteSpace:"nowrap",zIndex:100,boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>{toast}</div>}
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
